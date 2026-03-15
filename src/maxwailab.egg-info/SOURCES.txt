@@ -4,6 +4,7 @@ pyproject.toml
 src/maxwailab/__init__.py
 src/maxwailab/binning.py
 src/maxwailab/feature_selection.py
+src/maxwailab/hyperparameter_analysis.py
 src/maxwailab.egg-info/PKG-INFO
 src/maxwailab.egg-info/SOURCES.txt
 src/maxwailab.egg-info/dependency_links.txt

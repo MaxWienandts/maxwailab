@@ -1,0 +1,29 @@
+Metadata-Version: 2.4
+Name: maxwailab
+Version: 0.1.0
+Summary: Bootstrap-based model stability and supervised binning toolkit
+Author: Max Wienandts
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+License-File: LICENSE.txt
+Requires-Dist: numpy
+Requires-Dist: pandas
+Requires-Dist: scikit-learn
+Requires-Dist: lightgbm
+Requires-Dist: matplotlib
+Requires-Dist: seaborn
+Requires-Dist: tqdm
+Dynamic: license-file
+
+# stableml
+
+Bootstrap-based stability analysis toolkit for ML pipelines.
+
+## Installation
+
+pip install stableml
+
+## Example
+
+```python
+from stableml import bootstrap_lightgbm_forward_selection

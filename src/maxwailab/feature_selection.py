@@ -13,7 +13,7 @@ from sklearn.metrics import (
 import seaborn as sns
 
 # ==========================================================
-# MÉTRICAS
+# METRICS
 # ==========================================================
 def compute_metrics(y_true, y_proba):
     y_pred = (y_proba >= 0.5).astype(int)
@@ -28,7 +28,7 @@ def compute_metrics(y_true, y_proba):
 
 
 # ==========================================================
-# FUNÇÃO PRINCIPAL
+# MAIN FUNCTION
 # ==========================================================
 def bootstrap_lightgbm_forward_selection(
     df,
@@ -103,7 +103,7 @@ def bootstrap_lightgbm_forward_selection(
         oob_mask[bootstrap_idx] = False
 
         if oob_mask.sum() == 0:
-            continue  # caso raríssimo
+            continue  # For rare cases
 
         X_train = X_full.iloc[bootstrap_idx]
         y_train = y_full.iloc[bootstrap_idx]
@@ -160,7 +160,7 @@ def bootstrap_lightgbm_forward_selection(
             )
 
     # ======================================================
-    # ORGANIZA OUTPUT
+    # OUTPUT
     # ======================================================
     metrics_df = {
         metric: pd.DataFrame(values)
@@ -221,17 +221,16 @@ def performance_forward_selection_boxplot(df_metric, metric_name):
     >>> performance_boxplot(df_rmse, "RMSE", title="Model RMSE vs Number of Features")
     """
     
-    # Garante cópia
     df_aux = df_metric.copy()
 
-    # Índice representa número de variáveis (step)
+    # The index is the number of variables
     df_aux = df_aux.reset_index()
     df_aux.rename(columns={"index": "n_variables"}, inplace=True)
 
-    # Começar contagem em 1
+    # initialize count for variables
     df_aux["n_variables"] += 1
 
-    # Converte para formato long
+    # Long format
     df_long = df_aux.melt(
         id_vars="n_variables",
         var_name="bootstrap",
@@ -263,57 +262,163 @@ def performance_forward_selection_boxplot(df_metric, metric_name):
 
 def variable_frequency_forward_selection(df, n_bootstraps):
     """
-    Cria um heatmap mostrando a frequência (proporção) com que cada variável
-    foi selecionada em cada modelo com diferentes quantidades de variáveis.
-    
-    Parâmetros:
-    - df: DataFrame com colunas: variáveis + 'n_variables' + 'modelo' (ou similar)
-    - n_bootstraps: número total de bootstraps realizados (para calcular proporção)
+    Creates a heatmap showing the frequency (proportion) with which each variable
+    was selected in models with different numbers of variables.
     """
+
     df_aux = df.copy()
-    
-    # Aqui transformamos em contagem por variável por combinação de n_variables
+
+    # Convert the data into counts per variable for each n_variables combination
     df_variables_heatmap = (
-        df_aux.iloc[:, :-1]                 
-        .apply(pd.Series.value_counts, axis = 1)
+        df_aux.iloc[:, :-1]
+        .apply(pd.Series.value_counts, axis=1)
         .fillna(0)
     )
-    
-    # Normaliza pela quantidade de bootstraps → vira proporção
+
+    # Normalize by number of bootstraps → convert counts into proportions
     df_variables_heatmap = df_variables_heatmap / n_bootstraps
 
+    # Cumulative frequency (forward selection effect)
     df_variables_heatmap = df_variables_heatmap.cumsum()
-    # Remove possíveis NaN remanescentes
+
+    # Remove zeros
     df_variables_heatmap = df_variables_heatmap.replace({0: np.nan})
 
-    # Garantir contagem iniciando em 1
+    # Ensure counting starts at 1
     df_variables_heatmap["n_variables"] = range(1, len(df_variables_heatmap) + 1)
-    
-    # Tornar n_variables o index
+
+    # Set index
     df_variables_heatmap = df_variables_heatmap.set_index("n_variables")
-    
-    # Configuração do gráfico
+
+    # -------------------------------------------------
+    # ROW ORDERING ALGORITHM (greedy by column)
+    # -------------------------------------------------
+    df_order = df_variables_heatmap.T.copy()
+
+    ordered_rows = []
+    remaining_rows = list(df_order.index)
+
+    for col in df_order.columns:
+
+        if not remaining_rows:
+            break
+
+        # choose row with largest value in this column
+        best_row = df_order.loc[remaining_rows, col].idxmax()
+
+        ordered_rows.append(best_row)
+        remaining_rows.remove(best_row)
+
+    # append remaining rows if any
+    ordered_rows.extend(remaining_rows)
+
+    df_order = df_order.loc[ordered_rows]
+
+    # -------------------------------------------------
+    # Plot
+    # -------------------------------------------------
+
     size_x = 8
     size_y = 8
-    
+
     plt.figure(figsize=(size_x + 5, size_y + 13))
-    
+
     sns.set(font_scale=0.7)
-    
-    with sns.axes_style('white'):
+
+    with sns.axes_style("white"):
         ax = sns.heatmap(
-            df_variables_heatmap.T,                    # transposto para variáveis nas linhas
+            df_order,
             linewidths=0.2,
             annot=True,
-            fmt='.1f',                                 # formato original era '.1f' em alguns trechos
-            cmap='seismic',
+            fmt=".1f",
+            cmap="seismic",
             vmin=-1,
             vmax=1
         )
-    
-    plt.title('Most used variables')
+
+    plt.title("Most used variables")
+
     bottom, top = ax.get_ylim()
     ax.set_ylim(bottom + 0.5, top - 0.5)
-    
+
     plt.show()
     plt.close()
+
+
+
+# Display the top-k variables using the same ordering used in the
+# variable_frequency_forward_selection heatmap.
+def _compute_forward_selection_order(df_variables_heatmap):
+    """
+    Internal function to compute the greedy ordering used in the heatmap.
+    """
+
+    df_order = df_variables_heatmap.T.copy()
+
+    ordered_rows = []
+    remaining_rows = list(df_order.index)
+
+    for col in df_order.columns:
+
+        if not remaining_rows:
+            break
+
+        best_row = df_order.loc[remaining_rows, col].idxmax()
+
+        ordered_rows.append(best_row)
+        remaining_rows.remove(best_row)
+
+    ordered_rows.extend(remaining_rows)
+
+    return ordered_rows
+def top_k_forward_selection_variables(df, n_bootstraps, k=10):
+    """
+    Return the top-k variables using the same ordering used in the
+    variable_frequency_forward_selection heatmap.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        result_bootstrap["variables"]
+
+    n_bootstraps : int
+        Number of bootstrap iterations.
+
+    k : int, default=10
+        Number of variables to return.
+
+    return_df : bool, default=False
+        If True, returns a DataFrame with variable ranks.
+
+    Returns
+    -------
+    list or pd.DataFrame
+        List of top-k variables or a DataFrame with ranking.
+    """
+
+    df_aux = df.copy()
+
+    df_variables_heatmap = (
+        df_aux.iloc[:, :-1]
+        .apply(pd.Series.value_counts, axis=1)
+        .fillna(0)
+    )
+
+    df_variables_heatmap = df_variables_heatmap / n_bootstraps
+    df_variables_heatmap = df_variables_heatmap.cumsum()
+    df_variables_heatmap = df_variables_heatmap.replace({0: np.nan})
+
+    df_variables_heatmap["n_variables"] = range(1, len(df_variables_heatmap) + 1)
+    df_variables_heatmap = df_variables_heatmap.set_index("n_variables")
+
+    ordered_rows = _compute_forward_selection_order(df_variables_heatmap)
+
+    top_k = ordered_rows[:k]
+
+    return top_k
+
+
+
+
+
+

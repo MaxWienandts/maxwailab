@@ -371,7 +371,8 @@ def _compute_forward_selection_order(df_variables_heatmap):
     ordered_rows.extend(remaining_rows)
 
     return ordered_rows
-def top_k_forward_selection_variables(df, n_bootstraps, k=10):
+
+def top_k_forward_selection_variables_by_frequency_usage(df, n_bootstraps, k=10):
     """
     Return the top-k variables using the same ordering used in the
     variable_frequency_forward_selection heatmap.

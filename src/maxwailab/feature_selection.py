@@ -419,6 +419,60 @@ def top_k_forward_selection_variables(df, n_bootstraps, k=10):
 
 
 
+# Returns the k variables that produced the best performancefor a given metric.
+def top_k_variables_by__forward_selection_boxplot(result_bootstrap, k, metric):
+    """
+    Returns the k variables that produced the best performance
+    for a given metric.
 
+    Parameters
+    ----------
+    result_bootstrap : dict
+        Dictionary containing:
+        - "variables"
+        - performance metrics (e.g. "auc_roc", "accuracy")
 
+    k : int
+        Number of variables in the model
 
+    metric : str
+        Performance metric key inside result_bootstrap
+
+    Returns
+    -------
+    variables : list
+        List with the k variables
+
+    performance : float
+        Best performance obtained
+    """
+
+    df_vars = result_bootstrap["variables"]
+    df_metric = result_bootstrap[metric]
+
+    row = k - 1
+
+    # performance row
+    perf_row = df_metric.loc[row]
+
+    # maximum performance
+    performance = perf_row.max()
+
+    # bootstrap column where max occurs
+    best_col = perf_row.idxmax()
+
+    # corresponding variables
+    variables = df_vars.loc[:row, best_col].tolist()
+
+    return variables, performance
+
+# Example usage
+vars_best, perf = top_k_variables_by__forward_selection_boxplot(
+    result_bootstrap,
+    k=2,
+    metric="auc_roc"
+)
+
+print(vars_best)
+print()
+print(perf)

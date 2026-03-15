@@ -8,6 +8,7 @@ from .feature_selection import (
     performance_forward_selection_boxplot,
     variable_frequency_forward_selection,
     top_k_forward_selection_variables_by_frequency_usage,
+    top_k_variables_by__forward_selection_boxplot,
 )
 
 from .hyperparameter_analysis import (

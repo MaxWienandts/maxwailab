@@ -270,7 +270,7 @@ def tree_supervised_binning(
     # -------------------------
     if plot:
 
-        fig, ax = plt.subplots(figsize=(10, 5))
+        fig, ax = plt.subplots(figsize=(10, 7))
     
         x_positions = np.arange(len(summary))
         bars = ax.bar(

@@ -3,10 +3,11 @@
 Bootstrap-based stability analysis toolkit for ML pipelines.
 
 ## Installation
+pip install maxwailab
 
-pip install stableml
 
 ## Example
 
 ```python
-from stableml import bootstrap_lightgbm_forward_selection
+from maxwailab import bootstrap_lightgbm_forward_selection
+

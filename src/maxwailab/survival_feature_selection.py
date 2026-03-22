@@ -4,30 +4,10 @@ from tqdm import tqdm
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-def _require_survival_dependencies():
-    try:
-        from lifelines import WeibullAFTFitter, LogNormalAFTFitter, CoxPHFitter
-        from lifelines.utils import concordance_index
-        
-        from sksurv.metrics import (
-            concordance_index_ipcw,
-            integrated_brier_score,
-            brier_score
-        )
-        from sksurv.util import Surv
-    except ImportError as e:
-        raise ImportError(
-            "Survival analysis features require optional dependencies. "
-            "Install them with:\n\n"
-            "    pip install maxwailab[survival]\n"
-        ) from e
-
-
 # ==========================================================
 # MODEL FACTORY
 # ==========================================================
 def build_lifelines_model(model_type, hyperparameters):
-    _require_survival_dependencies()
 
     if model_type == "aft_weibull":
         return WeibullAFTFitter(**hyperparameters)
@@ -99,7 +79,23 @@ def compute_survival_metrics(
             - Integrated Brier Score: overall calibration + discrimination
             - Mean Time-dependent Brier Score
     """
-    _require_survival_dependencies()
+    try:
+        from lifelines import WeibullAFTFitter, LogNormalAFTFitter, CoxPHFitter
+        from lifelines.utils import concordance_index
+        
+        from sksurv.metrics import (
+            concordance_index_ipcw,
+            integrated_brier_score,
+            brier_score
+        )
+        from sksurv.util import Surv
+
+    except ImportError as e:
+        raise ImportError(
+            "Survival analysis features require optional dependencies. "
+            "Install them with:\n\n"
+            "    pip install maxwailab[survival]\n"
+        ) from e
     
     # =====================================================
     # Structured arrays (required by sksurv)
@@ -216,7 +212,26 @@ def bootstrap_survival_forward_selection(
 
     Bootstrap is applied ONLY to training set.
     """
-    _require_survival_dependencies()
+    # ------------------------------------------------------
+    # Imports
+    # ------------------------------------------------------
+    try:
+        from lifelines import WeibullAFTFitter, LogNormalAFTFitter, CoxPHFitter
+        from lifelines.utils import concordance_index
+        
+        from sksurv.metrics import (
+            concordance_index_ipcw,
+            integrated_brier_score,
+            brier_score
+        )
+        from sksurv.util import Surv
+
+    except ImportError as e:
+        raise ImportError(
+            "Survival analysis features require optional dependencies. "
+            "Install them with:\n\n"
+            "    pip install maxwailab[survival]\n"
+        ) from e
     
     # ------------------------------------------------------
     # Temporal split if df_val not provided
@@ -415,7 +430,23 @@ def bootstrap_model_variable_comparison_paired(
     dict
         Statistical summary of paired bootstrap comparison.
     """
-    _require_survival_dependencies()
+    try:
+        from lifelines import WeibullAFTFitter, LogNormalAFTFitter, CoxPHFitter
+        from lifelines.utils import concordance_index
+        
+        from sksurv.metrics import (
+            concordance_index_ipcw,
+            integrated_brier_score,
+            brier_score
+        )
+        from sksurv.util import Surv
+
+    except ImportError as e:
+        raise ImportError(
+            "Survival analysis features require optional dependencies. "
+            "Install them with:\n\n"
+            "    pip install maxwailab[survival]\n"
+        ) from e
     
     if hyperparameters is None:
         hyperparameters = {}
@@ -662,7 +693,23 @@ def survival_bootstrap_model_comparison(
     -------
     dict with bootstrap distributions and ranking summary
     """
-    _require_survival_dependencies()
+    try:
+        from lifelines import WeibullAFTFitter, LogNormalAFTFitter, CoxPHFitter
+        from lifelines.utils import concordance_index
+        
+        from sksurv.metrics import (
+            concordance_index_ipcw,
+            integrated_brier_score,
+            brier_score
+        )
+        from sksurv.util import Surv
+
+    except ImportError as e:
+        raise ImportError(
+            "Survival analysis features require optional dependencies. "
+            "Install them with:\n\n"
+            "    pip install maxwailab[survival]\n"
+        ) from e
 
     # --------------------------------------------------
     # Temporal split

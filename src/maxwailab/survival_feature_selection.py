@@ -9,6 +9,24 @@ import seaborn as sns
 # ==========================================================
 def build_lifelines_model(model_type, hyperparameters):
 
+    try:
+        from lifelines import WeibullAFTFitter, LogNormalAFTFitter, CoxPHFitter
+        from lifelines.utils import concordance_index
+        
+        from sksurv.metrics import (
+            concordance_index_ipcw,
+            integrated_brier_score,
+            brier_score
+        )
+        from sksurv.util import Surv
+
+    except ImportError as e:
+        raise ImportError(
+            "Survival analysis features require optional dependencies. "
+            "Install them with:\n\n"
+            "    pip install maxwailab[survival]\n"
+        ) from e
+        
     if model_type == "aft_weibull":
         return WeibullAFTFitter(**hyperparameters)
 

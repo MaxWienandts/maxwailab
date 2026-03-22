@@ -24,10 +24,12 @@ dependencies = [
 
 [project.optional-dependencies]
 survival = [
-    "lifelines>=0.27"
+    "lifelines>=0.27",
+    "scikit-survival>=0.20"
 ]
 all = [
-    "lifelines>=0.27"
+    "lifelines>=0.27",
+    "scikit-survival>=0.20"
 ]
 
 [tool.setuptools]

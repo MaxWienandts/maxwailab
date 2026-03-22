@@ -27,6 +27,7 @@ def _require_survival_dependencies():
 # MODEL FACTORY
 # ==========================================================
 def build_lifelines_model(model_type, hyperparameters):
+    _require_survival_dependencies()
 
     if model_type == "aft_weibull":
         return WeibullAFTFitter(**hyperparameters)
@@ -98,7 +99,8 @@ def compute_survival_metrics(
             - Integrated Brier Score: overall calibration + discrimination
             - Mean Time-dependent Brier Score
     """
-
+    _require_survival_dependencies()
+    
     # =====================================================
     # Structured arrays (required by sksurv)
     # =====================================================
@@ -413,6 +415,7 @@ def bootstrap_model_variable_comparison_paired(
     dict
         Statistical summary of paired bootstrap comparison.
     """
+    _require_survival_dependencies()
     
     if hyperparameters is None:
         hyperparameters = {}
@@ -659,6 +662,7 @@ def survival_bootstrap_model_comparison(
     -------
     dict with bootstrap distributions and ranking summary
     """
+    _require_survival_dependencies()
 
     # --------------------------------------------------
     # Temporal split

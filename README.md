@@ -13,15 +13,13 @@ The library focuses on **reducing overfitting and improving model interpretabili
 
 # Installation
 
-```bash
-pip install maxwailab 
-```
-
-or
-
-```bash
-pip install git+https://github.com/MaxWienandts/maxailab.git
-```
+| Option | Command |
+|--------|---------|
+| Core (minimal dependencies) | `pip install maxwailab` |
+| Survival Module Only | `pip install maxwailab[survival]` |
+| Everything (core + all optional) | `pip install maxwailab[all]` |
+| Core from GitHub | `pip install git+https://github.com/MaxWienandts/maxwailab.git` |
+| GitHub with survival extras | `pip install "git+https://github.com/MaxWienandts/maxwailab.git#egg=maxwailab[survival]"` |
 
 ---
 
@@ -78,15 +76,12 @@ lightgbm_hyperparameter_auc_curve_bootstrap
 
 ---
 
-# Example Workflow
+# LightGBM Classification Example
 
 ```python
 import maxwailab
 
-# --------------------------------
-# Forward Selection with Bootstrap
-# --------------------------------
-
+# Forward selection with bootstrap
 result_bootstrap = maxwailab.bootstrap_lightgbm_forward_selection(
     df=data,
     target="target",
@@ -95,102 +90,50 @@ result_bootstrap = maxwailab.bootstrap_lightgbm_forward_selection(
     metric_to_optimize="auc_roc",
     hyperparameters=lgb_params
 )
+
+# Analyze performance stability
+maxwailab.performance_forward_selection_boxplot(result_bootstrap["auc_roc"], "AUC")
+
+# Variable selection stability
+maxwailab.variable_frequency_forward_selection(result_bootstrap["variables"], n_bootstraps=30)
+
+# Extract best variables
+top_vars = maxwailab.top_k_forward_selection_variables_by_frequency_usage(result_bootstrap["variables"], n_bootstraps=30, k=10)
+# Or
+top_vars = maxwailab.top_k_variables_by_forward_selection_boxplot(result_bootstrap["variables"], n_bootstraps=30, k=10)
 ```
 
----
+## Paired Bootstrap Comparison (LightGBM)
 
-## Analyze performance stability
-
+Compare two models: baseline vs modified (adding/removing variables):
 ```python
-bml.performance_forward_selection_boxplot(
-    result_bootstrap["auc_roc"],
-    "AUC"
+comparison = maxwailab.bootstrap_model_variable_comparison_paired_lgbm(
+    df_train=df_train,
+    base_variables=["var1", "var2"],
+    variables_to_add=["var3"],
+    variables_to_remove=["var2"],
+    target_col="target",
+    n_bootstrap=100,
+    metric="auc",
+    hyperparameters=lgb_params
 )
 ```
+Generates:
+- Validation performance distributions
+- Paired bootstrap difference distribution
+- Statistical summary (mean, 95% CI, probability of improvement)
 
-This visualizes how performance behaves as variables are added.
-
----
-
-## Variable selection stability
-
-```python
-maxwailab.variable_frequency_forward_selection(
-    result_bootstrap["variables"],
-    n_bootstraps=30
-)
-```
-
-Heatmap showing **how frequently variables appear in models of different sizes**.
-
----
-
-## Extract best variables
-
-### Based on selection frequency
-
-```python
-maxwailab.top_k_forward_selection_variables(
-    result_bootstrap["variables"],
-    n_bootstraps=30,
-    k=10
-)
-```
-
-### Based on best model performance
-
-```python
-variables, auc = maxwailab.top_k_variables_by_forward_selection_boxplot(
-    result_bootstrap,
-    k=6,
-    metric="auc_roc"
-)
-```
-
----
-
-# Tree-based Supervised Binning
-
-Supervised binning using decision trees.
-
+## Tree-based Supervised Binning
 ```python
 from maxwailab import tree_supervised_binning
 
-tree_supervised_binning(
-    df=data,
-    feature="age",
-    target="target",
-    max_leaf_nodes=5
-)
-```
+tree_supervised_binning(df=data, feature="age", target="target", max_leaf_nodes=5)
 
----
-
-## Bootstrap Binning Stability
-
-```python
-bootstrap_tree_binning_auc_analysis(
-    df_train,
-    df_val,
-    feature="age",
-    target="target"
-)
-```
-
-Evaluates how **binning performance varies across bootstrap samples**.
-
----
-
-# Hyperparameter Sensitivity Analysis
-
-Evaluate how model performance reacts to hyperparameter changes.
-
-```python
+# Bootstrap binning stability
+bootstrap_tree_binning_auc_analysis(df_train, df_val, feature="age", target="target")
+Hyperparameter Sensitivity Analysis
 lightgbm_hyperparameter_auc_curve_bootstrap(
-    X_train,
-    y_train,
-    X_val,
-    y_val,
+    X_train, y_train, X_val, y_val,
     hyperparameters=lgb_params,
     hyperparameter_name="num_leaves",
     hyperparameter_values=[5,10,20,40],
@@ -198,26 +141,68 @@ lightgbm_hyperparameter_auc_curve_bootstrap(
 )
 ```
 
-Bootstrap is applied **only to the training set** while keeping validation **fixed (out-of-time)**.
+## Survival Analysis Workflows
+Bootstrap Forward Selection for Survival Models
+```python
+result_survival = maxwailab.bootstrap_survival_forward_selection(
+    df_train=df_train,
+    duration_col="duration",
+    event_col="event",
+    start_month_col="start_month",
+    model_type="cox_breslow",
+    n_bootstrap=50,
+    n_max_variables=10,
+    metric_to_optimize="c_index",
+    hyperparameters=cox_params
+)
 
----
+# Analyze performance stability
+maxwailab.performance_forward_selection_boxplot(result_survival["auc_roc"], "AUC")
 
-# Example Output
+# Variable selection stability
+maxwailab.variable_frequency_forward_selection(result_survival["variables"], n_bootstraps=30)
 
-The library produces:
+# Extract best variables
+top_vars = maxwailab.top_k_forward_selection_variables_by_frequency_usage(result_survival["variables"], n_bootstraps=30, k=10)
+# Or
+top_vars = maxwailab.top_k_variables_by_forward_selection_boxplot(result_survival["variables"], n_bootstraps=30, k=10)
+```
 
-* performance **distributions**
-* **boxplots**
-* **stability heatmaps**
-* **hyperparameter sensitivity curves**
+## Paired Bootstrap Comparison for Survival Models
+```python
+comparison_surv = maxwailab.bootstrap_model_variable_comparison_paired(
+    df_train=df_train,
+    model_type="cox_breslow",
+    base_variables=["var1", "var2"],
+    variables_to_add=["var3"],
+    variables_to_remove=["var2"],
+    n_bootstrap=50,
+    metric="c_index"
+)
+```
 
-These diagnostics help detect:
+Generates:
+- Baseline vs Modified model performance distribution
+- Paired difference plot
+- Statistical inference summary
 
-* overfitting
-* unstable features
-* fragile hyperparameters
+## Compare Multiple Survival Models
+```python
+models_dict = {
+    "Cox": CoxModel(),
+    "AFT": AFTModel()
+}
 
----
+comparison_multi = maxwailab.survival_bootstrap_model_comparison(
+    df_train=df_train,
+    models_dict=models_dict,
+    feature_cols=["var1", "var2", "var3"],
+    n_bootstrap=50
+)
+```
+Outputs:
+- Bootstrap distributions per model
+- Ranking summary
 
 # Module Structure
 
@@ -232,13 +217,19 @@ maxwailab
 │   ├── bootstrap_lightgbm_forward_selection
 │   ├── performance_forward_selection_boxplot
 │   ├── variable_frequency_forward_selection
-│   ├── top_k_forward_selection_variables
+│   ├── top_k_forward_selection_variables_by_frequency_usage
 │   └── top_k_variables_by_forward_selection_boxplot
+│   └── bootstrap_model_variable_comparison_paired_lgbm
 │
 └── hyperparameter_analysis
     └── lightgbm_hyperparameter_auc_curve_bootstrap
+│
+└── survival_feature_selection
+    └── bootstrap_survival_forward_selection
+    └── bootstrap_model_variable_comparison_paired
+    └── survival_bootstrap_model_comparison
 ```
-
+   
 ---
 
 # When to Use This Library

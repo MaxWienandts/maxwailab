@@ -262,7 +262,7 @@ def performance_forward_selection_boxplot(df_metric, metric_name):
     plt.show()
 
 
-def variable_frequency_forward_selection(df, n_bootstraps):
+def variable_frequency_forward_selection(df, n_bootstraps, figsize = (15, 15)):
     """
     Creates a heatmap showing the frequency (proportion) with which each variable
     was selected in models with different numbers of variables.
@@ -320,10 +320,7 @@ def variable_frequency_forward_selection(df, n_bootstraps):
     # Plot
     # -------------------------------------------------
 
-    size_x = 8
-    size_y = 8
-
-    plt.figure(figsize=(size_x + 5, size_y + 13))
+    plt.figure(figsize=figsize)
 
     sns.set(font_scale=0.7)
 
@@ -468,3 +465,244 @@ def top_k_variables_by_forward_selection_boxplot(result_bootstrap, k, metric):
     variables = df_vars.loc[:row, best_col].tolist()
 
     return variables, performance
+
+
+
+# Verify model performance removing or adding variables.
+def bootstrap_model_variable_comparison_paired_lgbm(
+    df_train,
+    base_variables,
+    target_col,
+    df_val=None,
+    start_month_col=None,
+    variables_to_remove=None,
+    variables_to_add=None,
+    n_bootstrap=100,
+    metric="auc",
+    hyperparameters=None
+):
+    """
+    Paired bootstrap comparison between two LightGBM classification models:
+    
+        1) Baseline (base_variables)
+        2) Modified (remove/add variables)
+
+    Uses stratified bootstrap.
+    Returns formal statistical inference.
+    """
+
+    import numpy as np
+    import pandas as pd
+    import matplotlib.pyplot as plt
+    from tqdm import tqdm
+    from lightgbm import LGBMClassifier
+    from sklearn.metrics import (
+        roc_auc_score,
+        log_loss,
+        accuracy_score,
+        f1_score
+    )
+
+    if hyperparameters is None:
+        hyperparameters = {}
+
+    # -----------------------------------
+    # Build modified variable list
+    # -----------------------------------
+    modified_variables = base_variables.copy()
+
+    if variables_to_remove:
+        modified_variables = [v for v in modified_variables if v not in variables_to_remove]
+
+    if variables_to_add:
+        modified_variables = list(set(modified_variables + variables_to_add))
+
+    better_is_lower = metric in ["logloss"]
+
+    # -----------------------------------
+    # Data split
+    # -----------------------------------
+    if df_val is None:
+    
+        if start_month_col is not None:
+            # Temporal split (time-ordered)
+            df_train = df_train.sort_values(start_month_col)
+            split_index = int(len(df_train) * 0.8)
+    
+            df_val = df_train.iloc[split_index:].copy()
+            df_train = df_train.iloc[:split_index].copy()
+    
+        else:
+            # Random stratified split (i.i.d. assumption)
+            df_train, df_val = train_test_split(
+                df_train,
+                test_size=0.2,
+                stratify=df_train[target_col],
+                random_state=42
+            )
+
+    base_scores = []
+    mod_scores = []
+    differences = []
+
+    # -----------------------------------
+    # Stratified bootstrap
+    # -----------------------------------
+    for b in tqdm(range(n_bootstrap)):
+
+        # ======================================================
+        # BOOTSTRAP
+        # ======================================================
+        n_samples = len(df_train)
+        rng = np.random.default_rng(b)
+        bootstrap_idx = rng.integers(0, n_samples, n_samples)
+
+        oob_mask = np.ones(n_samples, dtype=bool)
+        oob_mask[bootstrap_idx] = False
+
+        if oob_mask.sum() == 0:
+            continue  # caso raríssimo
+
+        df_boot = df_train.iloc[bootstrap_idx]
+
+        if df_boot[target_col].nunique() < 2:
+            continue
+
+        # ---------------------------
+        # Baseline model
+        # ---------------------------
+        model_base = LGBMClassifier(**hyperparameters)
+        model_base.fit(
+            df_boot[base_variables],
+            df_boot[target_col]
+        )
+
+        preds_base = model_base.predict_proba(df_val[base_variables])[:, 1]
+
+        # ---------------------------
+        # Modified model
+        # ---------------------------
+        model_mod = LGBMClassifier(**hyperparameters)
+        model_mod.fit(
+            df_boot[modified_variables],
+            df_boot[target_col]
+        )
+
+        preds_mod = model_mod.predict_proba(df_val[modified_variables])[:, 1]
+
+        # ---------------------------
+        # Metric computation
+        # ---------------------------
+        y_val = df_val[target_col]
+
+        if metric == "auc":
+            base_score = roc_auc_score(y_val, preds_base)
+            mod_score = roc_auc_score(y_val, preds_mod)
+
+        elif metric == "logloss":
+            base_score = log_loss(y_val, preds_base)
+            mod_score = log_loss(y_val, preds_mod)
+
+        elif metric == "accuracy":
+            base_score = accuracy_score(y_val, preds_base > 0.5)
+            mod_score = accuracy_score(y_val, preds_mod > 0.5)
+
+        elif metric == "f1":
+            base_score = f1_score(y_val, preds_base > 0.5)
+            mod_score = f1_score(y_val, preds_mod > 0.5)
+
+        else:
+            raise ValueError("Unsupported metric")
+
+        base_scores.append(base_score)
+        mod_scores.append(mod_score)
+        differences.append(mod_score - base_score)
+
+    base_scores = np.array(base_scores)
+    mod_scores = np.array(mod_scores)
+    differences = np.array(differences)
+
+    # ======================================================
+    # Plot 1 — Performance Distribution
+    # ======================================================
+
+    removed_str = ", ".join(variables_to_remove) if variables_to_remove else "None"
+    added_str = ", ".join(variables_to_add) if variables_to_add else "None"
+
+    base_label = f"Baseline\nVars: {', '.join(base_variables)}"
+    mod_label = f"Modified\nRemoved: {removed_str}\nAdded: {added_str}"
+
+    plt.figure(figsize=(8, 6))
+    box = plt.boxplot([base_scores, mod_scores], patch_artist=True)
+
+    colors = ["#4C72B0", "#55A868"]
+    for patch, color in zip(box["boxes"], colors):
+        patch.set_facecolor(color)
+        patch.set_alpha(0.6)
+
+    for median in box["medians"]:
+        median.set_color("black")
+        median.set_linewidth(2)
+
+    plt.xticks([1, 2], [base_label, mod_label])
+    plt.ylabel(metric.upper())
+    plt.title("Validation Performance (Bootstrap Distribution)")
+    plt.grid(False)
+    plt.gcf().set_facecolor("white")
+    plt.gca().set_facecolor("white")
+    plt.tight_layout()
+    plt.show()
+
+    # ======================================================
+    # Plot 2 — Paired Difference
+    # ======================================================
+
+    if better_is_lower:
+        direction_text = "Negative values favor Modified (lower is better)"
+    else:
+        direction_text = "Positive values favor Modified (higher is better)"
+
+    plt.figure(figsize=(7, 5))
+    box = plt.boxplot(differences, patch_artist=True)
+    box["boxes"][0].set_facecolor("#C44E52")
+    box["boxes"][0].set_alpha(0.6)
+    box["medians"][0].set_color("black")
+
+    plt.axhline(0, linestyle="--")
+    plt.xticks([1], ["Modified − Baseline"])
+    plt.ylabel(metric.upper())
+    plt.title(
+        "Paired Validation Difference (Modified − Baseline)\n"
+        f"{direction_text}"
+    )
+    plt.grid(False)
+    plt.tight_layout()
+    plt.show()
+
+    # ======================================================
+    # Statistical Inference
+    # ======================================================
+
+    mean_diff = differences.mean()
+    ci_low, ci_high = np.percentile(differences, [2.5, 97.5])
+
+    if better_is_lower:
+        prob_better = np.mean(differences < 0)
+    else:
+        prob_better = np.mean(differences > 0)
+
+    p_value = 2 * min(
+        np.mean(differences > 0),
+        np.mean(differences < 0)
+    )
+
+    return {
+        "baseline_mean": base_scores.mean(),
+        "modified_mean": mod_scores.mean(),
+        "mean_difference": mean_diff,
+        "ci_2_5": ci_low,
+        "ci_97_5": ci_high,
+        "probability_modified_better": prob_better,
+        "two_sided_p_value": p_value,
+        "n_effective_bootstrap": len(differences)
+    }

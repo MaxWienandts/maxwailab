@@ -666,23 +666,6 @@ def survival_bootstrap_model_comparison(
     -------
     dict with bootstrap distributions and ranking summary
     """
-    try:
-        from lifelines import WeibullAFTFitter, LogNormalAFTFitter, CoxPHFitter
-        from lifelines.utils import concordance_index
-        
-        from sksurv.metrics import (
-            concordance_index_ipcw,
-            integrated_brier_score,
-            brier_score
-        )
-        from sksurv.util import Surv
-
-    except ImportError as e:
-        raise ImportError(
-            "Survival analysis features require optional dependencies. "
-            "Install them with:\n\n"
-            "    pip install maxwailab[survival]\n"
-        ) from e
 
     # --------------------------------------------------
     # Temporal split
@@ -838,12 +821,9 @@ def survival_bootstrap_model_comparison(
     print(prob_best_c)
 
     return {
-        "baseline_vars": base_variables,
-        "baseline_val_mean": np.mean(base_val_scores),
-        "modified_val_mean": np.mean(mod_val_scores),
-        "mean_difference_val": mean_diff,
-        "ci_2_5": ci_low,
-        "ci_97_5": ci_high,
-        "probability_modified_better": prob_better,
-        "n_effective_bootstrap": len(differences)
+        "ibs_scores": ibs_scores,
+        "cindex_scores": cindex_scores,
+        "summary": summary_df,
+        "prob_best_ibs": prob_best_ibs,
+        "prob_best_c": prob_best_c
     }

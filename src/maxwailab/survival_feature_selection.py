@@ -5,45 +5,6 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 # ==========================================================
-# MODEL FACTORY
-# ==========================================================
-def build_lifelines_model(model_type, hyperparameters):
-
-    try:
-        from lifelines import WeibullAFTFitter, LogNormalAFTFitter, CoxPHFitter
-        from lifelines.utils import concordance_index
-        
-        from sksurv.metrics import (
-            concordance_index_ipcw,
-            integrated_brier_score,
-            brier_score
-        )
-        from sksurv.util import Surv
-
-    except ImportError as e:
-        raise ImportError(
-            "Survival analysis features require optional dependencies. "
-            "Install them with:\n\n"
-            "    pip install maxwailab[survival]\n"
-        ) from e
-        
-    if model_type == "aft_weibull":
-        return WeibullAFTFitter(**hyperparameters)
-
-    elif model_type == "aft_lognormal":
-        return LogNormalAFTFitter(**hyperparameters)
-
-    elif model_type == "cox_breslow":
-        return CoxPHFitter(baseline_estimation_method="breslow", **hyperparameters)
-
-    elif model_type == "cox_spline":
-        return CoxPHFitter(baseline_estimation_method="spline", **hyperparameters)
-
-    else:
-        raise ValueError("Unsupported model_type")
-
-    
-# ==========================================================
 # BOOTSTRAP
 # ==========================================================
 def discrete_duration_bootstrap(
@@ -97,24 +58,7 @@ def compute_survival_metrics(
             - Integrated Brier Score: overall calibration + discrimination
             - Mean Time-dependent Brier Score
     """
-    try:
-        from lifelines import WeibullAFTFitter, LogNormalAFTFitter, CoxPHFitter
-        from lifelines.utils import concordance_index
-        
-        from sksurv.metrics import (
-            concordance_index_ipcw,
-            integrated_brier_score,
-            brier_score
-        )
-        from sksurv.util import Surv
 
-    except ImportError as e:
-        raise ImportError(
-            "Survival analysis features require optional dependencies. "
-            "Install them with:\n\n"
-            "    pip install maxwailab[survival]\n"
-        ) from e
-    
     # =====================================================
     # Structured arrays (required by sksurv)
     # =====================================================
@@ -215,7 +159,7 @@ def bootstrap_survival_forward_selection(
     duration_col,
     event_col,
     start_month_col,
-    model_type,
+    model,
     n_bootstrap,
     n_max_variables,
     metric_to_optimize,
@@ -230,27 +174,7 @@ def bootstrap_survival_forward_selection(
 
     Bootstrap is applied ONLY to training set.
     """
-    # ------------------------------------------------------
-    # Imports
-    # ------------------------------------------------------
-    try:
-        from lifelines import WeibullAFTFitter, LogNormalAFTFitter, CoxPHFitter
-        from lifelines.utils import concordance_index
-        
-        from sksurv.metrics import (
-            concordance_index_ipcw,
-            integrated_brier_score,
-            brier_score
-        )
-        from sksurv.util import Surv
 
-    except ImportError as e:
-        raise ImportError(
-            "Survival analysis features require optional dependencies. "
-            "Install them with:\n\n"
-            "    pip install maxwailab[survival]\n"
-        ) from e
-    
     # ------------------------------------------------------
     # Temporal split if df_val not provided
     # ------------------------------------------------------
@@ -316,10 +240,8 @@ def bootstrap_survival_forward_selection(
 
                 trial_features = selected_features + [feature]
 
-                model = build_lifelines_model(
-                    model_type,
-                    hyperparameters
-                )
+                model = model.__class__(**model._kwargs) \
+                    if hasattr(model, "_kwargs") else model.__class__()
 
                 model.fit(
                     df_train_boot[trial_features + [duration_col, event_col]],
@@ -368,7 +290,7 @@ def bootstrap_survival_forward_selection(
 
 def bootstrap_model_variable_comparison_paired(
     df_train,
-    model_type,
+    model,
     base_variables,
     df_val=None,
     duration_col='duration',
@@ -380,6 +302,7 @@ def bootstrap_model_variable_comparison_paired(
     metric="ibs",
     hyperparameters=None
 ):
+
     """
     Performs a paired bootstrap comparison between two survival models:
     
@@ -409,9 +332,7 @@ def bootstrap_model_variable_comparison_paired(
     df_train : pd.DataFrame
         Training dataset.
     
-    model_type : str
-        Survival model identifier
-        ("cox_breslow", "cox_spline", "aft_lognormal", "aft_weibull").
+    model : model instance.
     
     base_variables : list[str]
         Variables used in the baseline model.
@@ -440,31 +361,11 @@ def bootstrap_model_variable_comparison_paired(
     metric : str
         Performance metric to evaluate.
     
-    hyperparameters : dict
-        Model hyperparameters passed to builder.
-    
     Returns
     -------
     dict
         Statistical summary of paired bootstrap comparison.
     """
-    try:
-        from lifelines import WeibullAFTFitter, LogNormalAFTFitter, CoxPHFitter
-        from lifelines.utils import concordance_index
-        
-        from sksurv.metrics import (
-            concordance_index_ipcw,
-            integrated_brier_score,
-            brier_score
-        )
-        from sksurv.util import Surv
-
-    except ImportError as e:
-        raise ImportError(
-            "Survival analysis features require optional dependencies. "
-            "Install them with:\n\n"
-            "    pip install maxwailab[survival]\n"
-        ) from e
     
     if hyperparameters is None:
         hyperparameters = {}
@@ -520,11 +421,12 @@ def bootstrap_model_variable_comparison_paired(
 
         # ==========================
         # BASELINE MODEL
-        # ==========================
-        model_base = build_lifelines_model(model_type, hyperparameters)
+        # ==========================      
+        model_base = model.__class__(**model._kwargs) \
+            if hasattr(model, "_kwargs") else model.__class__()
 
         model_base.fit(
-            df_train_boot[base_variables + [duration_col, event_col]],
+            df_train_boot[base_variables  + [duration_col, event_col]],
             duration_col=duration_col,
             event_col=event_col
         )
@@ -543,7 +445,8 @@ def bootstrap_model_variable_comparison_paired(
         # ==========================
         # MODIFIED MODEL
         # ==========================
-        model_mod = build_lifelines_model(model_type, hyperparameters)
+        model_mod = model.__class__(**model._kwargs) \
+            if hasattr(model, "_kwargs") else model.__class__()
 
         model_mod.fit(
             df_train_boot[modified_variables + [duration_col, event_col]],
@@ -576,7 +479,7 @@ def bootstrap_model_variable_comparison_paired(
     removed_str = ", ".join(variables_to_remove) if variables_to_remove else "None"
     added_str = ", ".join(variables_to_add) if variables_to_add else "None"
     
-    base_label = f"Baseline\nVars: {', '.join(base_variables)}"
+    base_label = f"Baseline"
     mod_label = (
         f"Modified\n"
         f"Removed: {removed_str}\n"
@@ -673,6 +576,7 @@ def bootstrap_model_variable_comparison_paired(
         prob_better = np.mean(differences > 0)
 
     return {
+        "baseline_vars": base_variables,
         "baseline_val_mean": np.mean(base_val_scores),
         "modified_val_mean": np.mean(mod_val_scores),
         "mean_difference_val": mean_diff,
@@ -883,9 +787,12 @@ def survival_bootstrap_model_comparison(
     print(prob_best_c)
 
     return {
-        "ibs_scores": ibs_scores,
-        "cindex_scores": cindex_scores,
-        "summary": summary_df,
-        "prob_best_ibs": prob_best_ibs,
-        "prob_best_c": prob_best_c
+        "baseline_vars": base_variables,
+        "baseline_val_mean": np.mean(base_val_scores),
+        "modified_val_mean": np.mean(mod_val_scores),
+        "mean_difference_val": mean_diff,
+        "ci_2_5": ci_low,
+        "ci_97_5": ci_high,
+        "probability_modified_better": prob_better,
+        "n_effective_bootstrap": len(differences)
     }

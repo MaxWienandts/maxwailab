@@ -169,7 +169,8 @@ def tree_supervised_binning(
     min_samples_leaf: Union[int, float] = 0.10,
     random_state: int = 1,
     plot: bool = True,
-    annotate_counts: bool = True
+    annotate_counts: bool = True,
+    figsize=(10, 7)
 ) -> Dict[str, Any]:
     """
     Perform supervised univariate binning using a Decision Tree classifier
@@ -264,13 +265,15 @@ def tree_supervised_binning(
         .agg(count="count", target_rate="mean")
         .reset_index()
     )
+    total = summary["count"].sum()
+    summary["pct"] = summary["count"] / total
 
     # -------------------------
     # Plot
     # -------------------------
     if plot:
 
-        fig, ax = plt.subplots(figsize=(10, 7))
+        fig, ax = plt.subplots(figsize=figsize)
     
         x_positions = np.arange(len(summary))
         bars = ax.bar(
@@ -291,10 +294,10 @@ def tree_supervised_binning(
         )
     
         if annotate_counts:
-            for bar, count in zip(bars, summary["count"]):
+            for bar, count, pct in zip(bars, summary["count"], summary["pct"]):
                 height = bar.get_height()
                 ax.annotate(
-                    f"n={count}",
+                    f"{count} ({pct:.1%})",
                     xy=(bar.get_x() + bar.get_width() / 2, height),
                     xytext=(0, 3),
                     textcoords="offset points",
@@ -310,3 +313,111 @@ def tree_supervised_binning(
         "thresholds": thresholds,
         "bin_summary": summary
     }
+
+
+# Bin a variable and plot mean target per bin with count and % annotations.
+def plot_target_mean_by_binned_variable(
+    df: pd.DataFrame,
+    target: str,
+    variable: str,
+    bins: list,
+    right: bool = True,
+    include_lowest: bool = True,
+    figsize=(10, 7)
+):
+    """
+    Bin a variable and plot mean target per bin with count and % annotations.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+    target : str
+        Target column (numeric or binary)
+    variable : str
+        Variable to bin
+    bins : list
+        Cut points (does NOT need -inf / +inf)
+    right : bool
+        Interval type (a, b] if True
+    include_lowest : bool
+        Include lowest value in first bin
+
+    Returns
+    -------
+    pd.DataFrame
+        Summary table with bin statistics
+    """
+
+    df = df.copy()
+
+    # ----------------------------------------
+    # Prepare bins
+    # ----------------------------------------
+    bins = sorted(set(bins))
+
+    if bins[0] != -np.inf:
+        bins = [-np.inf] + bins
+
+    if bins[-1] != np.inf:
+        bins = bins + [np.inf]
+
+    # ----------------------------------------
+    # Create binned variable
+    # ----------------------------------------
+    df["_bin"] = pd.cut(
+        df[variable],
+        bins=bins,
+        right=right,
+        include_lowest=include_lowest
+    )
+
+    # ----------------------------------------
+    # Aggregate
+    # ----------------------------------------
+    summary = (
+        df
+        .groupby("_bin", observed=True)
+        .agg(
+            mean_target=(target, "mean"),
+            count=(target, "size")
+        )
+        .reset_index()
+    )
+
+    total = summary["count"].sum()
+    summary["pct"] = summary["count"] / total
+
+    # ----------------------------------------
+    # Plot
+    # ----------------------------------------
+    plt.figure(figsize=figsize)
+
+    x = np.arange(len(summary))
+    y = summary["mean_target"]
+
+    plt.bar(x, y)
+
+    plt.xticks(x, summary["_bin"].astype(str), rotation=45)
+    plt.ylabel(f"Mean of {target}")
+    plt.title(f"{target} mean by {variable} bins")
+
+    # ----------------------------------------
+    # Annotations
+    # ----------------------------------------
+    for i, (count, pct, val) in enumerate(zip(summary["count"], summary["pct"], y)):
+        plt.text(
+            i,
+            val,
+            f"{count} ({pct:.1%})",
+            ha="center",
+            va="bottom"
+        )
+
+    plt.grid(False)
+    plt.gcf().set_facecolor("white")
+    plt.gca().set_facecolor("white")
+
+    plt.tight_layout()
+    plt.show()
+
+    return summary

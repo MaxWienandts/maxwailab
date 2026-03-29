@@ -97,7 +97,7 @@ def bootstrap_lightgbm_forward_selection(
         rng = np.random.default_rng(b)
 
         # ======================================================
-        # BOOTSTRAP ESTATISTICAMENTE CORRETO (OOB real)
+        # BOOTSTRAP
         # ======================================================
         bootstrap_idx = rng.integers(0, n_samples, n_samples)
 
@@ -105,7 +105,7 @@ def bootstrap_lightgbm_forward_selection(
         oob_mask[bootstrap_idx] = False
 
         if oob_mask.sum() == 0:
-            continue  # For rare cases
+            continue  # caso raríssimo
 
         X_train = X_full.iloc[bootstrap_idx]
         y_train = y_full.iloc[bootstrap_idx]
@@ -223,16 +223,17 @@ def performance_forward_selection_boxplot(df_metric, metric_name):
     >>> performance_boxplot(df_rmse, "RMSE", title="Model RMSE vs Number of Features")
     """
     
+    # Garante cópia
     df_aux = df_metric.copy()
 
-    # The index is the number of variables
+    # Índice representa número de variáveis (step)
     df_aux = df_aux.reset_index()
     df_aux.rename(columns={"index": "n_variables"}, inplace=True)
 
-    # initialize count for variables
+    # Começar contagem em 1
     df_aux["n_variables"] += 1
 
-    # Long format
+    # Converte para formato long
     df_long = df_aux.melt(
         id_vars="n_variables",
         var_name="bootstrap",
@@ -257,6 +258,13 @@ def performance_forward_selection_boxplot(df_metric, metric_name):
         meanprops=meanprops
     )
 
+    # Remove grid explicitly (extra safety)
+    ax.grid(False)
+
+    # Ensure white background
+    ax.set_facecolor("white")
+    plt.gcf().set_facecolor("white")
+    
     ax.set_title("Performance by Number of Variables")
 
     plt.show()
@@ -623,51 +631,78 @@ def bootstrap_model_variable_comparison_paired_lgbm(
     differences = np.array(differences)
 
     # ======================================================
-    # Plot 1 — Performance Distribution
+    # PLOT 1: Validation Performance Comparison
     # ======================================================
 
     removed_str = ", ".join(variables_to_remove) if variables_to_remove else "None"
     added_str = ", ".join(variables_to_add) if variables_to_add else "None"
 
-    base_label = f"Baseline\nVars: {', '.join(base_variables)}"
+    base_label = f"Baseline"
     mod_label = f"Modified\nRemoved: {removed_str}\nAdded: {added_str}"
-
+    
     plt.figure(figsize=(8, 6))
-    box = plt.boxplot([base_scores, mod_scores], patch_artist=True)
-
+    
+    box = plt.boxplot(
+        [base_scores, mod_scores],
+        patch_artist=True,
+        widths=0.6
+    )
+    
+    # Color styling
     colors = ["#4C72B0", "#55A868"]
-    for patch, color in zip(box["boxes"], colors):
+    for patch, color in zip(box['boxes'], colors):
         patch.set_facecolor(color)
         patch.set_alpha(0.6)
-
-    for median in box["medians"]:
+    
+    # Emphasize medians
+    for median in box['medians']:
         median.set_color("black")
         median.set_linewidth(2)
-
+    
+    # Jittered points
+    for i, scores in enumerate([base_scores, mod_scores], start=1):
+        x = np.random.normal(i, 0.04, size=len(scores))
+        plt.scatter(x, scores, alpha=0.4)
+    
+    plt.style.use("default")  # ensures white background
     plt.xticks([1, 2], [base_label, mod_label])
     plt.ylabel(metric.upper())
     plt.title("Validation Performance (Bootstrap Distribution)")
-    plt.grid(False)
-    plt.gcf().set_facecolor("white")
-    plt.gca().set_facecolor("white")
+    
+    plt.grid(False)  # removes grid completely
+    
+    plt.gcf().set_facecolor("white")   # figure background
+    plt.gca().set_facecolor("white")   # axes background
+    
     plt.tight_layout()
     plt.show()
-
+    
     # ======================================================
-    # Plot 2 — Paired Difference
+    # PLOT 2: Paired Difference (Validation)
     # ======================================================
-
+    # Determine direction
     if better_is_lower:
         direction_text = "Negative values favor Modified (lower is better)"
     else:
         direction_text = "Positive values favor Modified (higher is better)"
-
     plt.figure(figsize=(7, 5))
-    box = plt.boxplot(differences, patch_artist=True)
-    box["boxes"][0].set_facecolor("#C44E52")
-    box["boxes"][0].set_alpha(0.6)
-    box["medians"][0].set_color("black")
-
+    
+    box = plt.boxplot(
+        differences,
+        patch_artist=True,
+        widths=0.5
+    )
+    
+    box['boxes'][0].set_facecolor("#C44E52")
+    box['boxes'][0].set_alpha(0.6)
+    
+    box['medians'][0].set_color("black")
+    box['medians'][0].set_linewidth(2)
+    
+    # Jittered differences
+    x = np.random.normal(1, 0.04, size=len(differences))
+    plt.scatter(x, differences, alpha=0.4)
+    
     plt.axhline(0, linestyle="--")
     plt.xticks([1], ["Modified − Baseline"])
     plt.ylabel(metric.upper())
@@ -675,15 +710,14 @@ def bootstrap_model_variable_comparison_paired_lgbm(
         "Paired Validation Difference (Modified − Baseline)\n"
         f"{direction_text}"
     )
-    plt.grid(False)
+    plt.grid(False)  # removes grid completely
     plt.tight_layout()
     plt.show()
 
     # ======================================================
-    # Statistical Inference
+    # Inference
     # ======================================================
-
-    mean_diff = differences.mean()
+    mean_diff = np.mean(differences)
     ci_low, ci_high = np.percentile(differences, [2.5, 97.5])
 
     if better_is_lower:
@@ -691,18 +725,13 @@ def bootstrap_model_variable_comparison_paired_lgbm(
     else:
         prob_better = np.mean(differences > 0)
 
-    p_value = 2 * min(
-        np.mean(differences > 0),
-        np.mean(differences < 0)
-    )
-
     return {
-        "baseline_mean": base_scores.mean(),
-        "modified_mean": mod_scores.mean(),
-        "mean_difference": mean_diff,
+        "baseline_vars": base_variables,
+        "baseline_val_mean": np.mean(base_scores),
+        "modified_val_mean": np.mean(mod_scores),
+        "mean_difference_val": mean_diff,
         "ci_2_5": ci_low,
         "ci_97_5": ci_high,
         "probability_modified_better": prob_better,
-        "two_sided_p_value": p_value,
         "n_effective_bootstrap": len(differences)
     }

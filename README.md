@@ -1,13 +1,17 @@
-# Bootstrap ML Diagnostics
+## Bootstrap ML diagnostics + statistical inference + Spark
 
-A lightweight toolkit for **statistically robust model diagnostics** using **bootstrap resampling**, with utilities for:
+A lightweight toolkit for statistically robust model diagnostics using bootstrap resampling, with both in-memory and distributed (PySpark) support.
 
-* supervised tree binning
-* bootstrap-based feature selection
-* model stability analysis
-* hyperparameter sensitivity analysis
+The library provides utilities for:
 
-The library focuses on **reducing overfitting and improving model interpretability** through **bootstrap distributions rather than single-point estimates**.
+- supervised tree binning  
+- bootstrap-based feature selection  
+- model stability analysis  
+- hyperparameter sensitivity analysis  
+- statistical feature diagnostics (e.g., logistic relevance, missing analysis)  
+- scalable data diagnostics with PySpark  
+
+The toolkit focuses on reducing overfitting and improving model interpretability by leveraging bootstrap distributions and statistical inference rather than single-point estimates.
 
 ---
 
@@ -17,9 +21,11 @@ The library focuses on **reducing overfitting and improving model interpretabili
 |--------|---------|
 | Core (minimal dependencies) | `pip install maxwailab` |
 | Survival Module Only | `pip install maxwailab[survival]` |
+| PySpark Module Only | `pip install maxwailab[pyspark]` |
 | Everything (core + all optional) | `pip install maxwailab[all]` |
 | Core from GitHub | `pip install git+https://github.com/MaxWienandts/maxwailab.git` |
 | GitHub with survival extras | `pip install "git+https://github.com/MaxWienandts/maxwailab.git#egg=maxwailab[survival]"` |
+| GitHub with PySpark extras | `pip install "git+https://github.com/MaxWienandts/maxwailab.git#egg=maxwailab[pyspark]"` |
 
 ---
 
@@ -50,12 +56,13 @@ Typical modeling workflow using this library:
 
 tree_supervised_binning
 bootstrap_tree_binning_auc_analysis
+plot_target_mean_by_binned_variable
 
 
 2️⃣ Feature selection
 
 bootstrap_lightgbm_forward_selection
-
+bootstrap_model_variable_comparison_paired
 
 3️⃣ Diagnostics
 
@@ -65,13 +72,26 @@ variable_frequency_forward_selection
 
 4️⃣ Extract best variables
 
-top_k_forward_selection_variables
+top_k_forward_selection_variables_by_frequency_usage
 top_k_variables_by_forward_selection_boxplot
 
 
 5️⃣ Hyperparameter analysis
 
 lightgbm_hyperparameter_auc_curve_bootstrap
+
+6️⃣ Survival Analysis (Optional)
+bootstrap_survival_forward_selection
+bootstrap_model_variable_comparison_paired
+survival_bootstrap_model_comparison
+
+7️⃣ PySpark Data Diagnostics
+pyspark_missing_values_table
+pyspark_minmax_value
+pyspark_compare_columns
+pyspark_value_counts_spark
+pyspark_missing_by_group
+pyspark_logistic_feature_significance
 ```
 
 ---
@@ -141,6 +161,23 @@ lightgbm_hyperparameter_auc_curve_bootstrap(
 )
 ```
 
+## Analyze target behavior across variable ranges
+```python
+# Define bins (no need for -inf / +inf)
+bins = [0, 18, 30, 50, 80]
+
+summary = plot_target_mean_by_binned_variable(
+    df=data,
+    target="target",
+    variable="age",
+    bins=bins
+)
+```
+
+- Visualizes target mean per bin
+- Displays observation count and percentage
+- Useful for feature understanding and pre-binning analysis
+
 ## Survival Analysis Workflows
 Bootstrap Forward Selection for Survival Models
 ```python
@@ -204,14 +241,30 @@ Outputs:
 - Bootstrap distributions per model
 - Ranking summary
 
+---
+
+### 🔍 Additional Utilities
+
+The examples above cover the core functionality of the library.  
+`maxwailab` also includes several additional utilities for:
+
+- PySpark-based data diagnostics  
+- statistical feature analysis  
+- extended bootstrap evaluations  
+- survival modeling workflows  
+
+For a complete list of available functions and usage examples, refer to the `notebooks/` directory in the repository, which contains practical, end-to-end implementations.
+
+---
+
 # Module Structure
 
-```
 maxwailab
 │
 ├── binning
 │   ├── tree_supervised_binning
 │   └── bootstrap_tree_binning_auc_analysis
+│   └── plot_target_mean_by_binned_variable
 │
 ├── feature_selection
 │   ├── bootstrap_lightgbm_forward_selection
@@ -222,14 +275,22 @@ maxwailab
 │   └── bootstrap_model_variable_comparison_paired_lgbm
 │
 └── hyperparameter_analysis
-    └── lightgbm_hyperparameter_auc_curve_bootstrap
+|   └── lightgbm_hyperparameter_auc_curve_bootstrap
 │
 └── survival_feature_selection
-    └── bootstrap_survival_forward_selection
-    └── bootstrap_model_variable_comparison_paired
-    └── survival_bootstrap_model_comparison
+|   └── bootstrap_survival_forward_selection
+|   └── bootstrap_model_variable_comparison_paired
+|   └── survival_bootstrap_model_comparison
+│
+└── pyspark_basic_functions
+|   └── pyspark_missing_values_table
+|   └── pyspark_minmax_value
+|   └── pyspark_compare_columns
+|   └── pyspark_value_counts_spark
+|   └── pyspark_missing_by_group
+|   └── pyspark_logistic_feature_significance
 ```
-   
+        
 ---
 
 # When to Use This Library
@@ -240,7 +301,7 @@ This library is particularly useful for:
 * **tabular ML problems**
 * **high-stakes predictive modeling**
 * **interpretable ML workflows**
-
+* **Using large-scale datasets with PySpark
 ---
 
 # License

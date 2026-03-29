@@ -1,6 +1,7 @@
 from .binning import (
     tree_supervised_binning,
     bootstrap_tree_binning_auc_analysis,
+    plot_target_mean_by_binned_variable,
 )
 
 from .feature_selection import (
@@ -25,4 +26,18 @@ try:
     )
 except ImportError:
     # survival dependencies not installed
+    pass
+
+# Optional pyspark module
+try:
+    from .pyspark_basic_functions import (
+        pyspark_missing_values_table,
+        pyspark_minmax_value,
+        pyspark_compare_columns,
+        pyspark_value_counts_spark,
+        pyspark_missing_by_group,
+        pyspark_logistic_feature_significance,
+    )
+except ImportError:
+    # pyspark dependencies not installed
     pass

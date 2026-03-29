@@ -58,7 +58,24 @@ def compute_survival_metrics(
             - Integrated Brier Score: overall calibration + discrimination
             - Mean Time-dependent Brier Score
     """
+    try:
+        from lifelines import WeibullAFTFitter, LogNormalAFTFitter, CoxPHFitter
+        from lifelines.utils import concordance_index
+        
+        from sksurv.metrics import (
+            concordance_index_ipcw,
+            integrated_brier_score,
+            brier_score
+        )
+        from sksurv.util import Surv
 
+    except ImportError as e:
+        raise ImportError(
+            "Survival analysis features require optional dependencies. "
+            "Install them with:\n\n"
+            "    pip install maxwailab[survival]\n"
+        ) from e
+        
     # =====================================================
     # Structured arrays (required by sksurv)
     # =====================================================

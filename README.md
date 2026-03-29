@@ -302,7 +302,7 @@ This library is particularly useful for:
 * **tabular ML problems**
 * **high-stakes predictive modeling**
 * **interpretable ML workflows**
-* **Using large-scale datasets with PySpark
+* **Using large-scale datasets with PySpark**
 ---
 
 # License

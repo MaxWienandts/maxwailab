@@ -258,12 +258,12 @@ For a complete list of available functions and usage examples, refer to the `not
 ---
 
 # Module Structure
-
+```
 maxwailab
 │
 ├── binning
 │   ├── tree_supervised_binning
-│   └── bootstrap_tree_binning_auc_analysis
+│   ├── bootstrap_tree_binning_auc_analysis
 │   └── plot_target_mean_by_binned_variable
 │
 ├── feature_selection
@@ -271,24 +271,25 @@ maxwailab
 │   ├── performance_forward_selection_boxplot
 │   ├── variable_frequency_forward_selection
 │   ├── top_k_forward_selection_variables_by_frequency_usage
-│   └── top_k_variables_by_forward_selection_boxplot
+│   ├── top_k_variables_by_forward_selection_boxplot
 │   └── bootstrap_model_variable_comparison_paired_lgbm
 │
-└── hyperparameter_analysis
-|   └── lightgbm_hyperparameter_auc_curve_bootstrap
+├── hyperparameter_analysis
+│   └── lightgbm_hyperparameter_auc_curve_bootstrap
 │
-└── survival_feature_selection
-|   └── bootstrap_survival_forward_selection
-|   └── bootstrap_model_variable_comparison_paired
-|   └── survival_bootstrap_model_comparison
+├── survival_feature_selection
+│   ├── bootstrap_survival_forward_selection
+│   ├── bootstrap_model_variable_comparison_paired
+│   └── survival_bootstrap_model_comparison
 │
-└── pyspark_basic_functions
-|   └── pyspark_missing_values_table
-|   └── pyspark_minmax_value
-|   └── pyspark_compare_columns
-|   └── pyspark_value_counts_spark
-|   └── pyspark_missing_by_group
-|   └── pyspark_logistic_feature_significance
+├── pyspark_basic_functions
+│   ├── pyspark_missing_values_table
+│   ├── pyspark_minmax_value
+│   ├── pyspark_compare_columns
+│   ├── pyspark_value_counts_spark
+│   ├── pyspark_missing_by_group
+│   └── pyspark_logistic_feature_significance
+
 ```
         
 ---

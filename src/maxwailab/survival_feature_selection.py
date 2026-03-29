@@ -174,7 +174,24 @@ def bootstrap_survival_forward_selection(
 
     Bootstrap is applied ONLY to training set.
     """
+    try:
+        from lifelines import WeibullAFTFitter, LogNormalAFTFitter, CoxPHFitter
+        from lifelines.utils import concordance_index
+        
+        from sksurv.metrics import (
+            concordance_index_ipcw,
+            integrated_brier_score,
+            brier_score
+        )
+        from sksurv.util import Surv
 
+    except ImportError as e:
+        raise ImportError(
+            "Survival analysis features require optional dependencies. "
+            "Install them with:\n\n"
+            "    pip install maxwailab[survival]\n"
+        ) from e
+    
     # ------------------------------------------------------
     # Temporal split if df_val not provided
     # ------------------------------------------------------
@@ -366,6 +383,23 @@ def bootstrap_model_variable_comparison_paired(
     dict
         Statistical summary of paired bootstrap comparison.
     """
+    try:
+        from lifelines import WeibullAFTFitter, LogNormalAFTFitter, CoxPHFitter
+        from lifelines.utils import concordance_index
+        
+        from sksurv.metrics import (
+            concordance_index_ipcw,
+            integrated_brier_score,
+            brier_score
+        )
+        from sksurv.util import Surv
+
+    except ImportError as e:
+        raise ImportError(
+            "Survival analysis features require optional dependencies. "
+            "Install them with:\n\n"
+            "    pip install maxwailab[survival]\n"
+        ) from e
     
     if hyperparameters is None:
         hyperparameters = {}

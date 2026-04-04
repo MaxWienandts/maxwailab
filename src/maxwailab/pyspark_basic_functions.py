@@ -183,8 +183,8 @@ def pyspark_minmax_value(df: DataFrame, col: str):
 
 
     df = df.filter(~(F.col(col).isNull() | isnan(F.col(col))))
-    max_value = df.agg(F.max(F.col)).collect()[0][0]
-    min_value = df.agg(F.min(F.col)).collect()[0][0]
+    max_value = df.agg(F.max(col)).collect()[0][0]
+    min_value = df.agg(F.min(col)).collect()[0][0]
 
     # Display the maximum value
     print(f"{col} min value: {min_value}")

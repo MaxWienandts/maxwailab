@@ -180,7 +180,6 @@ def bootstrap_survival_forward_selection(
     n_bootstrap,
     n_max_variables,
     metric_to_optimize,
-    hyperparameters,
     df_val=None
 ):
     """
@@ -334,7 +333,6 @@ def bootstrap_model_variable_comparison_paired(
     variables_to_add=None,
     n_bootstrap=50,
     metric="ibs",
-    hyperparameters=None
 ):
 
     """
@@ -417,9 +415,6 @@ def bootstrap_model_variable_comparison_paired(
             "Install them with:\n\n"
             "    pip install maxwailab[survival]\n"
         ) from e
-    
-    if hyperparameters is None:
-        hyperparameters = {}
 
     # -------------------------------
     # Build modified variable list
@@ -731,9 +726,22 @@ def survival_bootstrap_model_comparison(
 
     plt.figure(figsize=(9, 6))
 
+    color_map = {                    ##################################################
+        name: color
+        for name, color in zip(model_names, plt.cm.tab10.colors)
+    }
+    
     data_ibs = [ibs_scores[name] for name in model_names]
 
     box = plt.boxplot(data_ibs, patch_artist=True, widths=0.6)
+
+    for patch, name in zip(box["boxes"], model_names): 
+        patch.set_facecolor(color_map[name])
+        patch.set_alpha(0.6)
+    
+    for i, (name, values) in enumerate(zip(model_names, data_ibs), start=1):    
+        x = np.random.normal(i, 0.04, size=len(values))
+        plt.scatter(x, values, alpha=0.4, color=color_map[name])
 
     for patch in box["boxes"]:
         patch.set_alpha(0.6)
@@ -760,6 +768,14 @@ def survival_bootstrap_model_comparison(
     data_c = [cindex_scores[name] for name in model_names]
 
     box = plt.boxplot(data_c, patch_artist=True, widths=0.6)
+
+    for patch, name in zip(box["boxes"], model_names): 
+        patch.set_facecolor(color_map[name])
+        patch.set_alpha(0.6)
+    
+    for i, (name, values) in enumerate(zip(model_names, data_c), start=1):    
+        x = np.random.normal(i, 0.04, size=len(values))
+        plt.scatter(x, values, alpha=0.4, color=color_map[name])
 
     for patch in box["boxes"]:
         patch.set_alpha(0.6)

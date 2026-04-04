@@ -1,14 +1,73 @@
-from pyspark.sql import DataFrame, Window
-import pyspark.sql.functions as F
-from pyspark.sql import DataFrame
-from pyspark.sql.functions import col, count, when, isnan
-from pyspark.sql.types import NumericType
-
+import re
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-import statsmodels.api as sm
 
+
+def pyspark_print_shape(
+    df: DataFrame,
+    show_result: bool = False
+) -> dict:
+    """
+    Get the shape of a PySpark DataFrame.
+
+    Parameters
+    ----------
+    df : pyspark.sql.DataFrame
+        Input DataFrame.
+    show_result : bool, default=False
+        If True, prints the number of rows and columns.
+
+    Returns
+    -------
+    dict
+        {
+            "n_rows": int,
+            "n_columns": int
+        }
+
+    Notes
+    -----
+    - Triggers a Spark action (count), which may be expensive for large datasets.
+    """
+    try:
+        from pyspark.sql import DataFrame, Window
+        import pyspark.sql.functions as F
+        from pyspark.sql import DataFrame
+        from pyspark.sql.functions import col, count, when, isnan
+        from pyspark.sql.types import NumericType
+        import statsmodels.api as sm
+
+    except ImportError as e:
+        raise ImportError(
+            "PySpark features require optional dependencies. "
+            "Install them with:\n\n"
+            "    pip install maxwailab[pyspark]\n"
+        ) from e
+        
+    
+    
+    # -------------------------------
+    # Compute shape
+    # -------------------------------
+    n_rows = df.count()
+    n_columns = len(df.columns)
+
+    result = {
+        "n_rows": n_rows,
+        "n_columns": n_columns
+    }
+
+    # -------------------------------
+    # Optional display
+    # -------------------------------
+    if show_result:
+        print(f"Number of rows   : {n_rows:,}")
+        print(f"Number of columns: {n_columns:,}")
+
+    return result
+
+# --------------------------------------------------------------------------------------------
 
 def pyspark_missing_values_table(df: DataFrame) -> pd.DataFrame:
     """
@@ -36,11 +95,20 @@ def pyspark_missing_values_table(df: DataFrame) -> pd.DataFrame:
     - The function converts results to Pandas for easier manipulation.
     - Suitable for exploratory data analysis (EDA).
     """
-    from pyspark.sql import DataFrame, Window
-    import pyspark.sql.functions as F
-    from pyspark.sql import DataFrame
-    from pyspark.sql.functions import col, count, when, isnan
-    from pyspark.sql.types import NumericType
+    try:
+        from pyspark.sql import DataFrame, Window
+        import pyspark.sql.functions as F
+        from pyspark.sql import DataFrame
+        from pyspark.sql.functions import col, count, when, isnan
+        from pyspark.sql.types import NumericType
+        import statsmodels.api as sm
+
+    except ImportError as e:
+        raise ImportError(
+            "PySpark features require optional dependencies. "
+            "Install them with:\n\n"
+            "    pip install maxwailab[pyspark]\n"
+        ) from e
     
     # Build expressions to count missing values per column
     mis_val_exprs = []
@@ -86,9 +154,20 @@ def pyspark_missing_values_table(df: DataFrame) -> pd.DataFrame:
 # --------------------------------------------------------------------------------------------
 
 def pyspark_minmax_value(df: DataFrame, col: str):
-    from pyspark.sql import DataFrame, Window
-    import pyspark.sql.functions as F
-    from pyspark.sql import DataFrame
+    try:
+        from pyspark.sql import DataFrame, Window
+        import pyspark.sql.functions as F
+        from pyspark.sql import DataFrame
+        from pyspark.sql.functions import col, count, when, isnan
+        from pyspark.sql.types import NumericType
+        import statsmodels.api as sm
+
+    except ImportError as e:
+        raise ImportError(
+            "PySpark features require optional dependencies. "
+            "Install them with:\n\n"
+            "    pip install maxwailab[pyspark]\n"
+        ) from e
 
 
     df = df.filter(~(F.col(col).isNull() | isnan(F.col(col))))
@@ -117,11 +196,20 @@ def pyspark_compare_columns(
         - value_comparison: comparison of non-missing values
         - missing_comparison: comparison of NULL/NaN alignment
     """
-    from pyspark.sql import DataFrame, Window
-    import pyspark.sql.functions as F
-    from pyspark.sql import DataFrame
-    from pyspark.sql.functions import col, count, when, isnan
-    from pyspark.sql.types import NumericType
+    try:
+        from pyspark.sql import DataFrame, Window
+        import pyspark.sql.functions as F
+        from pyspark.sql import DataFrame
+        from pyspark.sql.functions import col, count, when, isnan
+        from pyspark.sql.types import NumericType
+        import statsmodels.api as sm
+
+    except ImportError as e:
+        raise ImportError(
+            "PySpark features require optional dependencies. "
+            "Install them with:\n\n"
+            "    pip install maxwailab[pyspark]\n"
+        ) from e
     
     # Helper: detect missing values (NULL or NaN)
     def is_missing(df: DataFrame, col_name: str):
@@ -220,11 +308,20 @@ def pyspark_value_counts_spark(
     - Uses a single pass over data (no df.count()).
     - Suitable for large-scale datasets.
     """
-    from pyspark.sql import DataFrame, Window
-    import pyspark.sql.functions as F
-    from pyspark.sql import DataFrame
-    from pyspark.sql.functions import col, count, when, isnan
-    from pyspark.sql.types import NumericType
+    try:
+        from pyspark.sql import DataFrame, Window
+        import pyspark.sql.functions as F
+        from pyspark.sql import DataFrame
+        from pyspark.sql.functions import col, count, when, isnan
+        from pyspark.sql.types import NumericType
+        import statsmodels.api as sm
+
+    except ImportError as e:
+        raise ImportError(
+            "PySpark features require optional dependencies. "
+            "Install them with:\n\n"
+            "    pip install maxwailab[pyspark]\n"
+        ) from e
     
     # Optionally filter NULL values
     if not include_nulls:
@@ -284,11 +381,20 @@ def pyspark_missing_by_group(
         - missing_percentage
     """
 
-    from pyspark.sql import DataFrame, Window
-    import pyspark.sql.functions as F
-    from pyspark.sql import DataFrame
-    from pyspark.sql.functions import col, count, when, isnan
-    from pyspark.sql.types import NumericType
+    try:
+        from pyspark.sql import DataFrame, Window
+        import pyspark.sql.functions as F
+        from pyspark.sql import DataFrame
+        from pyspark.sql.functions import col, count, when, isnan
+        from pyspark.sql.types import NumericType
+        import statsmodels.api as sm
+
+    except ImportError as e:
+        raise ImportError(
+            "PySpark features require optional dependencies. "
+            "Install them with:\n\n"
+            "    pip install maxwailab[pyspark]\n"
+        ) from e
 
     # Detect if column is numeric (to safely apply isnan)
     field = df.schema[target_col]
@@ -323,6 +429,188 @@ def pyspark_missing_by_group(
 
 # --------------------------------------------------------------------------------------------
 
+def pyspark_one_hot_encode(
+    df: DataFrame,
+    categorical_cols: list,
+    drop_strategy: str = "least_frequent",
+    drop_if_contains: str = "inform",
+    show_removed_categories: bool = False
+) -> DataFrame:
+    """
+    Perform one-hot encoding on categorical columns with automatic baseline removal.
+
+    Parameters
+    ----------
+    df : pyspark.sql.DataFrame
+        Input DataFrame.
+    categorical_cols : list
+        List of categorical column names.
+    drop_strategy : str, default="least_frequent"
+        Strategy to select category to drop:
+        - "least_frequent": drop category with lowest count
+        - "none": do not drop any category
+    drop_if_contains : str, default="inform"
+        If a category contains this string (case-insensitive),
+        it will be prioritized for removal.
+    show_removed_categories : bool, default=False
+        If True, prints which category was dropped per column.
+
+    Returns
+    -------
+    pyspark.sql.DataFrame
+        DataFrame with one-hot encoded columns added.
+
+    Notes
+    -----
+    - Drops one category to prevent multicollinearity (dummy variable trap).
+    - Sanitizes column names to be Spark-safe.
+    """
+
+    try:
+        from pyspark.sql import DataFrame, Window
+        import pyspark.sql.functions as F
+        from pyspark.sql import DataFrame
+        from pyspark.sql.functions import col, count, when, isnan
+        from pyspark.sql.types import NumericType
+        import statsmodels.api as sm
+
+    except ImportError as e:
+        raise ImportError(
+            "PySpark features require optional dependencies. "
+            "Install them with:\n\n"
+            "    pip install maxwailab[pyspark]\n"
+        ) from e
+        
+    def sanitize_col_name(name: str) -> str:
+        return re.sub(r"[^a-zA-Z0-9_]", "", name)
+
+    for col_name in categorical_cols:
+
+        # -------------------------------
+        # 1. Get category counts (small collect)
+        # -------------------------------
+        counts_df = (
+            df.groupBy(col_name)
+            .agg(F.count("*").alias("count"))
+        )
+
+        counts = counts_df.collect()  # still needed, but now minimal
+
+        if len(counts) <= 1:
+            continue
+
+        categories = [row[col_name] for row in counts]
+
+        # -------------------------------
+        # 2. Determine category to drop
+        # -------------------------------
+        drop_cat = None
+
+        if drop_strategy != "none":
+            # Priority: categories containing keyword
+            if drop_if_contains:
+                inform_cats = [
+                    cat for cat in categories
+                    if cat and drop_if_contains.lower() in str(cat).lower()
+                ]
+                if inform_cats:
+                    drop_cat = inform_cats[0]
+
+            # Otherwise: least frequent
+            if drop_cat is None and drop_strategy == "least_frequent":
+                drop_cat = min(counts, key=lambda x: x["count"])[col_name]
+
+        if show_removed_categories:
+            print(f"[{col_name}] dropped category: {drop_cat}")
+
+        # -------------------------------
+        # 3. Create dummy columns
+        # -------------------------------
+        for cat in categories:
+            if cat == drop_cat:
+                continue
+
+            safe_cat = sanitize_col_name(str(cat))
+            dummy_col = f"{col_name}_{safe_cat}"
+
+            df = df.withColumn(
+                dummy_col,
+                F.when(F.col(col_name) == cat, F.lit(1)).otherwise(F.lit(0))
+            )
+
+    return df
+
+# --------------------------------------------------------------------------------------------
+
+def pyspark_round_number_strings(
+    df: DataFrame,
+    columns: list = None,
+    decimals: int = 2,
+) -> DataFrame:
+    """
+    Round numeric values inside string interval columns.
+
+    Example:
+    --------
+    "1.2345" → "1.23"
+    "(1.2345, 5.6789]" → "(1.23, 5.68]"
+
+    Parameters
+    ----------
+    df : pyspark.sql.DataFrame
+        Input DataFrame.
+    columns : list, optional
+        Columns to process. If None, automatically selects string columns
+        with low cardinality.
+    decimals : int, default=2
+        Number of decimal places for rounding.
+
+    Returns
+    -------
+    pyspark.sql.DataFrame
+        DataFrame with transformed columns.
+
+    """
+    try:
+        from pyspark.sql import DataFrame, Window
+        import pyspark.sql.functions as F
+        from pyspark.sql import DataFrame
+        from pyspark.sql.functions import col, count, when, isnan
+        from pyspark.sql.types import NumericType, StringType
+        import statsmodels.api as sm
+
+    except ImportError as e:
+        raise ImportError(
+            "PySpark features require optional dependencies. "
+            "Install them with:\n\n"
+            "    p
+
+    # -------------------------------
+    # Regex pattern for floats
+    # -------------------------------
+    pattern = r'-?\d+\.\d+'
+
+    # -------------------------------
+    # 4. Efficient UDF (vectorized alternative not available)
+    # -------------------------------
+    def round_numbers_in_string(s: str):
+        if s is None:
+            return None
+
+        def repl(m):
+            return f"{float(m.group(0)):.{decimals}f}"
+
+        return re.sub(pattern, repl, s)
+
+    round_udf = F.udf(round_numbers_in_string, StringType())
+
+    for col_name in columns:
+        df = df.withColumn(col_name, round_udf(F.col(col_name)))
+
+    return df
+    
+# --------------------------------------------------------------------------------------------
+
 def pyspark_logistic_feature_significance(
     df: DataFrame,
     explanatory_var: str,
@@ -337,7 +625,21 @@ def pyspark_logistic_feature_significance(
     Optionally standardizes the explanatory variable to allow
     coefficient comparability across variables.
     """
+    try:
+        from pyspark.sql import DataFrame, Window
+        import pyspark.sql.functions as F
+        from pyspark.sql import DataFrame
+        from pyspark.sql.functions import col, count, when, isnan
+        from pyspark.sql.types import NumericType
+        import statsmodels.api as sm
 
+    except ImportError as e:
+        raise ImportError(
+            "PySpark features require optional dependencies. "
+            "Install them with:\n\n"
+            "    pip install maxwailab[pyspark]\n"
+        ) from e
+        
     # -------------------------------
     # 1. Select columns
     # -------------------------------

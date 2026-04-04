@@ -1,8 +1,9 @@
+import re
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
-from typing import Dict, Any, Optional, Union
+from typing import Dict, Any, Optional, Union, List
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import roc_auc_score
 
@@ -159,7 +160,7 @@ def bootstrap_tree_binning_auc_analysis(
     }
 
 
-
+# ---------------------------------------------------------------------------------------------------------------------
 
 def tree_supervised_binning(
     df: pd.DataFrame,
@@ -314,7 +315,7 @@ def tree_supervised_binning(
         "bin_summary": summary
     }
 
-
+# ---------------------------------------------------------------------------------------------------------------------
 # Bin a variable and plot mean target per bin with count and % annotations.
 def plot_target_mean_by_binned_variable(
     df: pd.DataFrame,
@@ -421,3 +422,162 @@ def plot_target_mean_by_binned_variable(
     plt.show()
 
     return summary
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+
+def pandas_one_hot_encode(
+    df: pd.DataFrame,
+    categorical_cols: list,
+    drop_strategy: str = "least_frequent",
+    drop_if_contains: str = "inform",
+    show_removed_categories: bool = False
+) -> pd.DataFrame:
+    """
+    Perform one-hot encoding on categorical columns with automatic baseline removal.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Input DataFrame.
+    categorical_cols : list
+        List of categorical column names.
+    drop_strategy : str, default="least_frequent"
+        Strategy to select category to drop:
+        - "least_frequent": drop category with lowest count
+        - "none": do not drop any category
+    drop_if_contains : str, default="inform"
+        If a category contains this string (case-insensitive),
+        it will be prioritized for removal.
+    show_removed_categories : bool, default=False
+        If True, prints which category was dropped per column.
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame with one-hot encoded columns added.
+
+    Notes
+    -----
+    - Drops one category to prevent multicollinearity (dummy variable trap).
+    - Sanitizes column names to be Pandas-safe.
+    """
+
+    df = df.copy()
+
+    def sanitize_col_name(name: str) -> str:
+        return re.sub(r"[^a-zA-Z0-9_]", "", name)
+
+    for col_name in categorical_cols:
+
+        # -------------------------------
+        # 1. Get category counts
+        # -------------------------------
+        counts = df[col_name].value_counts(dropna=False)
+
+        if len(counts) <= 1:
+            continue
+
+        categories = counts.index.tolist()
+
+        # -------------------------------
+        # 2. Determine category to drop
+        # -------------------------------
+        drop_cat = None
+
+        if drop_strategy != "none":
+            # Priority: categories containing keyword
+            if drop_if_contains:
+                inform_cats = [
+                    cat for cat in categories
+                    if pd.notna(cat) and drop_if_contains.lower() in str(cat).lower()
+                ]
+                if inform_cats:
+                    drop_cat = inform_cats[0]
+
+            # Otherwise: least frequent
+            if drop_cat is None and drop_strategy == "least_frequent":
+                drop_cat = counts.idxmin()
+
+        if show_removed_categories:
+            print(f"[{col_name}] dropped category: {drop_cat}")
+
+        # -------------------------------
+        # 3. Create dummy columns
+        # -------------------------------
+        for cat in categories:
+            if cat == drop_cat:
+                continue
+
+            safe_cat = sanitize_col_name(str(cat))
+            dummy_col = f"{col_name}_{safe_cat}"
+
+            df[dummy_col] = (df[col_name] == cat).astype(int)
+
+    return df
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+
+def pandas_round_number_strings(
+    df: pd.DataFrame,
+    columns: Optional[List[str]] = None,
+    decimals: int = 2,
+) -> pd.DataFrame:
+    """
+    Round numeric values inside string interval columns (pandas version).
+
+    Example
+    -------
+    "1.2345" → "1.23"
+    "(1.2345, 5.6789]" → "(1.23, 5.68]"
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Input DataFrame.
+    columns : list, optional
+        Columns to process. If None, automatically selects object/string columns
+        with low cardinality.
+    decimals : int, default=2
+        Number of decimal places for rounding.
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame with transformed columns.
+
+    Notes
+    -----
+    - Operates only on string-like columns.
+    - Uses vectorized string operations for performance.
+    - Avoids modifying original DataFrame (returns a copy).
+    """
+
+    df_out = df.copy()
+
+    # -------------------------------
+    # Regex pattern for floats
+    # -------------------------------
+    pattern = r'-?\d+\.\d+'
+
+    # -------------------------------
+    # Replacement function
+    # -------------------------------
+    def round_match(match):
+        return f"{float(match.group(0)):.{decimals}f}"
+
+    # -------------------------------
+    # Apply transformation
+    # -------------------------------
+    for col in columns:
+        df_out[col] = df_out[col].astype(str).str.replace(
+            pattern,
+            lambda m: round_match(m),
+            regex=True
+        )
+
+        # Restore NaNs (since astype(str) converts them to "nan")
+        df_out.loc[df[col].isna(), col] = None
+
+    return df_out

@@ -576,14 +576,15 @@ def pyspark_round_number_strings(
         import pyspark.sql.functions as F
         from pyspark.sql import DataFrame
         from pyspark.sql.functions import col, count, when, isnan
-        from pyspark.sql.types import NumericType, StringType
+        from pyspark.sql.types import NumericType
         import statsmodels.api as sm
 
     except ImportError as e:
         raise ImportError(
             "PySpark features require optional dependencies. "
             "Install them with:\n\n"
-            "    p
+            "    pip install maxwailab[pyspark]\n"
+        ) from e
 
     # -------------------------------
     # Regex pattern for floats

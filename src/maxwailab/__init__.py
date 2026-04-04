@@ -43,6 +43,12 @@ try:
         pyspark_print_shape,
         pyspark_round_number_strings,
     )
+    from pyspark.sql import DataFrame, Window
+    import pyspark.sql.functions as F
+    from pyspark.sql import DataFrame
+    from pyspark.sql.functions import col, count, when, isnan
+    from pyspark.sql.types import NumericType
+    import statsmodels.api as sm
 except ImportError:
     # pyspark dependencies not installed
     pass

@@ -3,6 +3,16 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
+try:
+    from pyspark.sql import DataFrame, Window
+    import pyspark.sql.functions as F
+    from pyspark.sql import DataFrame
+    from pyspark.sql.functions import col, count, when, isnan
+    from pyspark.sql.types import NumericType
+    import statsmodels.api as sm
+except ImportError:
+    # pyspark dependencies not installed
+    pass
 
 def pyspark_print_shape(
     df: DataFrame,

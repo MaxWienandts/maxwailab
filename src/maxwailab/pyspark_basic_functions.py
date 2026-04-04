@@ -14,6 +14,8 @@ except ImportError:
     # pyspark dependencies not installed
     pass
 
+
+    
 def pyspark_print_shape(
     df: DataFrame,
     show_result: bool = False
@@ -168,7 +170,7 @@ def pyspark_minmax_value(df: DataFrame, col: str):
         from pyspark.sql import DataFrame, Window
         import pyspark.sql.functions as F
         from pyspark.sql import DataFrame
-        from pyspark.sql.functions import col, count, when, isnan
+        from pyspark.sql.functions import count, when, isnan
         from pyspark.sql.types import NumericType
         import statsmodels.api as sm
 
@@ -180,9 +182,9 @@ def pyspark_minmax_value(df: DataFrame, col: str):
         ) from e
 
 
-    df = df.filter(~(F.col(col).isNull() | isnan(F.col(col))))
-    max_value = df.agg(F.max(col)).collect()[0][0]
-    min_value = df.agg(F.min(col)).collect()[0][0]
+    df = df.filter(~(F.col(F.col).isNull() | isnan(F.col(F.col))))
+    max_value = df.agg(F.max(F.col)).collect()[0][0]
+    min_value = df.agg(F.min(F.col)).collect()[0][0]
 
     # Display the maximum value
     print(f"{col} min value: {min_value}")
@@ -586,7 +588,7 @@ def pyspark_round_number_strings(
         import pyspark.sql.functions as F
         from pyspark.sql import DataFrame
         from pyspark.sql.functions import col, count, when, isnan
-        from pyspark.sql.types import NumericType
+        from pyspark.sql.types import NumericType, StringType
         import statsmodels.api as sm
 
     except ImportError as e:

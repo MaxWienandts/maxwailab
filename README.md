@@ -264,7 +264,9 @@ maxwailab
 ├── binning
 │   ├── tree_supervised_binning
 │   ├── bootstrap_tree_binning_auc_analysis
-│   └── plot_target_mean_by_binned_variable
+│   ├── plot_target_mean_by_binned_variable
+│   ├── pandas_one_hot_encode,
+│   └── pandas_round_number_strings,
 │
 ├── feature_selection
 │   ├── bootstrap_lightgbm_forward_selection
@@ -288,7 +290,10 @@ maxwailab
 │   ├── pyspark_compare_columns
 │   ├── pyspark_value_counts_spark
 │   ├── pyspark_missing_by_group
-│   └── pyspark_logistic_feature_significance
+│   ├── pyspark_logistic_feature_significance
+│   ├── pyspark_one_hot_encode,
+│   ├── pyspark_print_shape,
+│   └── pyspark_round_number_strings,
 
 ```
         

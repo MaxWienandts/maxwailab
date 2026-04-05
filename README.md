@@ -64,9 +64,8 @@ plot_target_mean_by_binned_variable
 bootstrap_lightgbm_forward_selection
 bootstrap_model_variable_comparison_paired
 bootstrap_survival_forward_selection
-bootstrap_model_variable_comparison_paired
 survival_bootstrap_model_comparison
-
+    
 3️⃣ Diagnostics
 
 performance_forward_selection_boxplot

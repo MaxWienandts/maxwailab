@@ -63,6 +63,9 @@ plot_target_mean_by_binned_variable
 
 bootstrap_lightgbm_forward_selection
 bootstrap_model_variable_comparison_paired
+bootstrap_survival_forward_selection
+bootstrap_model_variable_comparison_paired
+survival_bootstrap_model_comparison
 
 3️⃣ Diagnostics
 
@@ -80,12 +83,8 @@ top_k_variables_by_forward_selection_boxplot
 
 lightgbm_hyperparameter_auc_curve_bootstrap
 
-6️⃣ Survival Analysis (Optional)
-bootstrap_survival_forward_selection
-bootstrap_model_variable_comparison_paired
-survival_bootstrap_model_comparison
 
-7️⃣ PySpark Data Diagnostics
+6️⃣ PySpark Data Diagnostics
 pyspark_missing_values_table
 pyspark_minmax_value
 pyspark_compare_columns

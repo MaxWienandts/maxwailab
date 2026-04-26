@@ -100,40 +100,67 @@ pyspark_logistic_feature_significance
 import maxwailab
 
 # Forward selection with bootstrap
+hyperparameters = {
+    "objective": "binary",
+    "boosting_type": "gbdt",
+    "verbosity": -1,
+    "n_estimators": 100,
+    "learning_rate": 0.05,
+    "is_unbalanced": True
+}
+
 result_bootstrap = maxwailab.bootstrap_lightgbm_forward_selection(
-    df=data,
+    df=df,
     target="target",
-    n_bootstrap=30,
-    n_max_variables=15,
+    n_bootstrap=10,
+    n_max_variables=10,
     metric_to_optimize="auc_roc",
-    hyperparameters=lgb_params
+    hyperparameters=hyperparameters
 )
 
 # Analyze performance stability
 maxwailab.performance_forward_selection_boxplot(result_bootstrap["auc_roc"], "AUC")
 
 # Variable selection stability
-maxwailab.variable_frequency_forward_selection(result_bootstrap["variables"], n_bootstraps=30)
+maxwailab.variable_frequency_forward_selection(
+    result_bootstrap["variables"],
+    n_bootstraps=10,
+    figsize = (15, 15)
+)
 
 # Extract best variables
-top_vars = maxwailab.top_k_forward_selection_variables_by_frequency_usage(result_bootstrap["variables"], n_bootstraps=30, k=10)
+top_vars = maxwailab.top_k_forward_selection_variables_by_frequency_usage(
+    result_bootstrap["variables"],
+    n_bootstraps=10,
+    k=8
+)
+print(top_vars)
 # Or
-top_vars = maxwailab.top_k_variables_by_forward_selection_boxplot(result_bootstrap["variables"], n_bootstraps=30, k=10)
+vars_best, perf = maxwailab.top_k_variables_by_forward_selection_boxplot(
+    result_bootstrap,
+    k=2,
+    metric="auc_roc"
+)
+print(vars_best)
+print()
+print(perf)
 ```
 
 ## Paired Bootstrap Comparison (LightGBM)
 
 Compare two models: baseline vs modified (adding/removing variables):
 ```python
-comparison = maxwailab.bootstrap_model_variable_comparison_paired_lgbm(
-    df_train=df_train,
-    base_variables=["var1", "var2"],
-    variables_to_add=["var3"],
-    variables_to_remove=["var2"],
-    target_col="target",
+maxwailab.bootstrap_model_variable_comparison_paired_lgbm(
+    df_train,
+    base_variables=['worst perimeter', 'worst smoothness', 'worst texture', 'mean texture', 'mean concave points', 'worst radius', 'radius error', 'worst concavity'],
+    target_col='target',
+    df_val=df_val,
+    start_month_col=None,
+    variables_to_remove=['worst smoothness', 'worst texture'],
+    variables_to_add=['mean compactness', 'mean area'],
     n_bootstrap=100,
     metric="auc",
-    hyperparameters=lgb_params
+    hyperparameters=None
 )
 ```
 Generates:
@@ -145,29 +172,58 @@ Generates:
 ```python
 from maxwailab import tree_supervised_binning
 
-tree_supervised_binning(df=data, feature="age", target="target", max_leaf_nodes=5)
+best_bin_mean_radius_bin_size = tree_supervised_binning(
+    df = df_train,
+    feature='mean radius',
+    target='target',
+    max_leaf_nodes=5
+)
+bins = best_bin_mean_radius_bin_size['thresholds']
+print(
+    f"mean radius: "
+    f"{bins}"
+)
+print()
+display(best_bin_mean_radius_bin_size['bin_summary'])
 
 # Bootstrap binning stability
-bootstrap_tree_binning_auc_analysis(df_train, df_val, feature="age", target="target")
-Hyperparameter Sensitivity Analysis
-lightgbm_hyperparameter_auc_curve_bootstrap(
-    X_train, y_train, X_val, y_val,
-    hyperparameters=lgb_params,
-    hyperparameter_name="num_leaves",
-    hyperparameter_values=[5,10,20,40],
-    n_bootstrap=50
+bootstrap_tree_binning_auc_analysis_mean_radius = maxwailab.bootstrap_tree_binning_auc_analysis(
+    df_train,
+    df_val,
+    feature = 'mean radius',
+    target = 'target',
+    max_leaf_nodes_max = 7,
+    n_bootstrap = 30,
+    min_samples_leaf = 0.10,
+    random_state = 42,
+    plot = True,
 )
+
+# Hyperparameter Sensitivity Analysis
+analysis = maxwailab.lightgbm_hyperparameter_auc_curve_bootstrap(
+    X_train,
+    y_train,
+    X_val,
+    y_val,
+    hyperparameters=hyperparameters,
+    hyperparameter_name="num_leaves",
+    hyperparameter_values=[5,10,20,40,80],
+    n_bootstrap=200
+)
+
+print(analysis["results"])
+print()
+print(analysis["best_hyperparameters"])
 ```
 
 ## Analyze target behavior across variable ranges
 ```python
 # Define bins (no need for -inf / +inf)
 bins = [0, 18, 30, 50, 80]
-
-summary = plot_target_mean_by_binned_variable(
-    df=data,
+maxwailab.plot_target_mean_by_binned_variable(
+    df=df_train,
     target="target",
-    variable="age",
+    variable="mean radius",
     bins=bins
 )
 ```
@@ -179,23 +235,30 @@ summary = plot_target_mean_by_binned_variable(
 ## Survival Analysis Workflows
 Bootstrap Forward Selection for Survival Models
 ```python
-result_survival = maxwailab.bootstrap_survival_forward_selection(
-    df_train=df_train,
+hyperparameters = {
+    "penalizer": 0.01
+}
+results_bootstrap_survival_forward_selection = maxwailab.bootstrap_survival_forward_selection(
+    df_train=df,
     duration_col="duration",
     event_col="event",
-    start_month_col="start_month",
-    model_type="cox_breslow",
-    n_bootstrap=50,
-    n_max_variables=10,
-    metric_to_optimize="c_index",
-    hyperparameters=cox_params
+    start_month_col="start_year_month",
+    model=WeibullAFTFitter(penalizer=0.01),  #cox_breslow, cox_spline, aft_lognormal, aft_weibull
+    n_bootstrap=30,
+    n_max_variables=7,
+    metric_to_optimize="ibs",
+    df_val=None  # triggers temporal split
 )
 
 # Analyze performance stability
-maxwailab.performance_forward_selection_boxplot(result_survival["auc_roc"], "AUC")
+maxwailab.performance_forward_selection_boxplot(results_bootstrap_survival_forward_selection["ibs"], "Integrated Brier Score")
 
 # Variable selection stability
-maxwailab.variable_frequency_forward_selection(result_survival["variables"], n_bootstraps=30)
+maxwailab.variable_frequency_forward_selection(
+    results_bootstrap_survival_forward_selection["variables"],
+    n_bootstraps=30,
+    figsize = (7, 7)
+)
 
 # Extract best variables
 top_vars = maxwailab.top_k_forward_selection_variables_by_frequency_usage(result_survival["variables"], n_bootstraps=30, k=10)
@@ -206,13 +269,17 @@ top_vars = maxwailab.top_k_variables_by_forward_selection_boxplot(result_surviva
 ## Paired Bootstrap Comparison for Survival Models
 ```python
 comparison_surv = maxwailab.bootstrap_model_variable_comparison_paired(
-    df_train=df_train,
-    model_type="cox_breslow",
-    base_variables=["var1", "var2"],
-    variables_to_add=["var3"],
-    variables_to_remove=["var2"],
+    df_train = df,
+    df_val = None,
+    duration_col = 'duration',
+    event_col = 'event',
+    start_month_col = 'start_year_month',
+    model=WeibullAFTFitter(penalizer = 0.01),  #cox_breslow, cox_spline, aft_lognormal, aft_weibull,
+    base_variables=['fin', 'age', 'race', 'wexp'],
+    variables_to_remove=['race', 'age'],
+    variables_to_add=['mar', 'paro'],
     n_bootstrap=50,
-    metric="c_index"
+    metric="ibs",
 )
 ```
 
@@ -223,15 +290,20 @@ Generates:
 
 ## Compare Multiple Survival Models
 ```python
-models_dict = {
-    "Cox": CoxModel(),
-    "AFT": AFTModel()
+models = {
+    "Cox": CoxPHFitter(penalizer=0.01),
+    "Weibull AFT": WeibullAFTFitter(penalizer=0.01),
+    "LogNormal AFT": LogNormalAFTFitter(penalizer=0.01),
 }
 
-comparison_multi = maxwailab.survival_bootstrap_model_comparison(
-    df_train=df_train,
-    models_dict=models_dict,
-    feature_cols=["var1", "var2", "var3"],
+results = maxwailab.survival_bootstrap_model_comparison(
+    df_train=df,
+    feature_cols=['fin', 'age', 'race', 'wexp'],
+    models_dict=models,
+    df_val=None,
+    duration_col="duration",
+    event_col="event",
+    start_month_col="start_year_month",
     n_bootstrap=50
 )
 ```
